@@ -757,7 +757,6 @@ Analyzing heart sounds...
         </div>
     </div>
 </footer>
-
 <script>
     class HeartScopeAI {
         constructor() {
@@ -767,8 +766,11 @@ Analyzing heart sounds...
             this.recordingTimer = null;
             this.recordingTime = 0;
             this.chart = null;
-            this.apiBaseUrl = window.location.origin;
+            this.apiBaseUrl = window.location.origin.includes('localhost') 
+                ? 'http://localhost:8000' 
+                : 'https://lubdub.onrender.com';
             this.recordedAudioBlob = null;
+            this.wakeLock = null;
             
             this.initializeEventListeners();
             this.initializeChart();
@@ -790,20 +792,20 @@ Analyzing heart sounds...
             
             uploadZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                uploadZone.style.borderColor = 'var(--primary-blue)';
-                uploadZone.style.background = 'var(--neutral-100)';
+                uploadZone.style.borderColor = 'var(--accent-primary)';
+                uploadZone.style.background = 'var(--bg-tertiary)';
             });
 
             uploadZone.addEventListener('dragleave', (e) => {
                 e.preventDefault();
-                uploadZone.style.borderColor = 'var(--border-color)';
-                uploadZone.style.background = 'transparent';
+                uploadZone.style.borderColor = 'var(--border-primary)';
+                uploadZone.style.background = 'var(--bg-secondary)';
             });
 
             uploadZone.addEventListener('drop', (e) => {
                 e.preventDefault();
-                uploadZone.style.borderColor = 'var(--border-color)';
-                uploadZone.style.background = 'transparent';
+                uploadZone.style.borderColor = 'var(--border-primary)';
+                uploadZone.style.background = 'var(--bg-secondary)';
                 
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
@@ -871,17 +873,67 @@ Analyzing heart sounds...
 
         async startRecording() {
             try {
+                // Check for mobile device
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                // Add permission check
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('Microphone not supported on this device');
+                }
+
+                if (!window.MediaRecorder) {
+                    throw new Error('Audio recording not supported on this browser');
+                }
+
+                // iOS-specific audio context setup
+                if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')) {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        sampleRate: 44100,
+                        latencyHint: 'interactive'
+                    });
+                    
+                    // Resume AudioContext on mobile
+                    if (audioContext.state === 'suspended') {
+                        await audioContext.resume();
+                    }
+                }
+                
+                // Request wake lock to prevent suspension on mobile
+                if ('wakeLock' in navigator && isMobile) {
+                    try {
+                        this.wakeLock = await navigator.wakeLock.request('screen');
+                    } catch (err) {
+                        console.log('Wake lock not available:', err);
+                    }
+                }
+
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         sampleRate: 44100,
                         channelCount: 1,
                         echoCancellation: false,
-                        noiseSuppression: false
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                        googEchoCancellation: false,
+                        googAutoGainControl: false,
+                        googNoiseSuppression: false,
+                        googHighpassFilter: false,
+                        googTypingNoiseDetection: false,
+                        latency: 0.01,
+                        volume: 1.0
                     } 
                 });
                 
-                this.mediaRecorder = new MediaRecorder(stream);
+                // Force WAV format on iPhone if possible
+                let mimeType = 'audio/wav';
+                if (!MediaRecorder.isTypeSupported('audio/wav')) {
+                    mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+                }
+                
+                this.mediaRecorder = new MediaRecorder(stream, { mimeType });
                 this.audioChunks = [];
+                
+                console.log('🎙️ Recording with MIME type:', this.mediaRecorder.mimeType);
                 
                 this.mediaRecorder.ondataavailable = (event) => {
                     this.audioChunks.push(event.data);
@@ -909,7 +961,18 @@ Analyzing heart sounds...
                 }, 10000);
                 
             } catch (error) {
-                this.showError('Microphone access denied. Please allow microphone access and try again.');
+                console.error('Recording error:', error);
+                
+                // More specific error messages
+                if (error.name === 'NotAllowedError') {
+                    this.showError('Microphone permission denied. Please enable microphone access in browser settings and try again.');
+                } else if (error.name === 'NotFoundError') {
+                    this.showError('No microphone found on this device.');
+                } else if (error.name === 'NotSupportedError') {
+                    this.showError('Audio recording not supported on this browser. Try using Chrome or Safari.');
+                } else {
+                    this.showError('Error accessing microphone: ' + error.message);
+                }
             }
         }
 
@@ -920,6 +983,12 @@ Analyzing heart sounds...
                 this.isRecording = false;
                 this.updateRecordingUI(false);
                 this.stopTimer();
+                
+                // Release wake lock
+                if (this.wakeLock) {
+                    this.wakeLock.release();
+                    this.wakeLock = null;
+                }
             }
         }
 
@@ -975,13 +1044,27 @@ Analyzing heart sounds...
         async processRecording() {
             const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
             
+            // Debug info
+            console.log('🎵 Audio Blob Info:');
+            console.log('   Type:', audioBlob.type);
+            console.log('   Size:', audioBlob.size, 'bytes');
+            console.log('   MediaRecorder MIME:', this.mediaRecorder.mimeType);
+            
             // Setup audio playback
             this.setupAudioPlayback(audioBlob);
             
             try {
                 // Convert to audio array for visualization and analysis
                 const arrayBuffer = await audioBlob.arrayBuffer();
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 44100  // Force consistent sample rate
+                });
+                
+                // Resume audio context if suspended (mobile fix)
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                
                 const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
                 
                 // Get audio data and ACTUAL sample rate
@@ -993,12 +1076,16 @@ Analyzing heart sounds...
                 console.log('   Duration:', audioBuffer.duration, 'seconds');
                 console.log('   Array length:', audioData.length);
                 
-                // Update waveform with actual sample rate
-                this.updateWaveform(audioData, actualSampleRate);
+                // Apply low-frequency compensation for mobile devices
+                const compensatedAudio = this.compensateLowFrequencies(audioData, actualSampleRate);
                 
-                // Send for analysis with BOTH audio data AND sample rate info
-                await this.analyzeAudio(Array.from(audioData), actualSampleRate);
+                // Update waveform with actual sample rate
+                this.updateWaveform(compensatedAudio, actualSampleRate);
+                
+                // Send for analysis with compensated audio data
+                await this.analyzeAudio(Array.from(compensatedAudio), actualSampleRate);
             } catch (error) {
+                console.error('Processing error:', error);
                 this.showError('Error processing recording: ' + error.message);
             }
         }
@@ -1070,32 +1157,33 @@ Analyzing heart sounds...
                 this.showLoading(false);
             }
         }
-         
+
         compensateLowFrequencies(audioData, sampleRate) {
-        // Compensate for mobile devices that filter out low frequencies
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
-        if (!isMobile) {
-            return audioData; // No compensation needed for desktop
-        }
-        
-        console.log('📱 Applying mobile low-frequency compensation...');
-        
-        // Simple low-frequency boost for heart sound frequencies (20-200Hz)
-        const compensated = new Float32Array(audioData.length);
-        const boostFactor = 2.0; // Boost low frequencies that mobile may have attenuated
-        
-        for (let i = 0; i < audioData.length; i++) {
-            // Apply gentle boost to compensate for high-pass filtering
-            compensated[i] = audioData[i] * boostFactor;
+            // Compensate for mobile devices that filter out low frequencies
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
-            // Clamp to prevent distortion
-            compensated[i] = Math.max(-1, Math.min(1, compensated[i]));
+            if (!isMobile) {
+                return audioData; // No compensation needed for desktop
+            }
+            
+            console.log('📱 Applying mobile low-frequency compensation...');
+            
+            // Simple low-frequency boost for heart sound frequencies (20-200Hz)
+            const compensated = new Float32Array(audioData.length);
+            const boostFactor = 2.0; // Boost low frequencies that mobile may have attenuated
+            
+            for (let i = 0; i < audioData.length; i++) {
+                // Apply gentle boost to compensate for high-pass filtering
+                compensated[i] = audioData[i] * boostFactor;
+                
+                // Clamp to prevent distortion
+                compensated[i] = Math.max(-1, Math.min(1, compensated[i]));
+            }
+            
+            console.log('   Applied', boostFactor + 'x boost for low frequencies');
+            return compensated;
         }
-        
-        console.log('   Applied', boostFactor + 'x boost for low frequencies');
-        return compensated;
-        }
+
         updateWaveform(audioData, sampleRate) {
             // Downsample for visualization (show every 100th sample for performance)
             const downsampleRate = Math.max(1, Math.floor(audioData.length / 1000));
@@ -1146,6 +1234,9 @@ Analyzing heart sounds...
             if (result.classification.toLowerCase() !== 'artifact') {
                 document.getElementById('s1Count').textContent = result.s1_count;
                 document.getElementById('s2Count').textContent = result.s2_count;
+                // Make sure elements are visible
+                document.getElementById('s1Count').parentElement.style.display = 'block';
+                document.getElementById('s2Count').parentElement.style.display = 'block';
             } else {
                 // Hide S1/S2 count elements for artifact classification
                 document.getElementById('s1Count').parentElement.style.display = 'none';
