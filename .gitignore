@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Models and data
+models/*.pkl
+models/*.joblib
+data/
+logs/
+*.wav
+*.mp3
+*.flac
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment variables
+.env

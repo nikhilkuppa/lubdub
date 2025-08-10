@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HeartScope AI • Advanced PCG Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Tiempos:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js"></script>
+<style>
+:root {
+--caribbean-blue: #4DD0E1;
+--tropical-teal: #26C6DA;
+--coral-pink: #FF7043;
+--sunset-orange: #FFB74D;
+--ocean-deep: #0277BD;
+--mint-fresh: #81C784;
+--pearl-white: #F8FFFE;
+--glass-white: rgba(248, 255, 254, 0.08);
+--glass-border: rgba(255, 255, 255, 0.18);
+--text-primary: #1A1A1A;
+--text-secondary: #4A5568;
+--shadow-soft: 0 8px 32px rgba(77, 208, 225, 0.08);
+--shadow-glow: 0 0 40px rgba(77, 208, 225, 0.15);
+}
+
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+}
+
+body {
+font-family: 'Tiempos', Georgia, serif;
+background: 
+radial-gradient(circle at 20% 80%, rgba(77, 208, 225, 0.3) 0%, transparent 50%),
+radial-gradient(circle at 80% 20%, rgba(255, 112, 67, 0.2) 0%, transparent 50%),
+radial-gradient(circle at 40% 40%, rgba(129, 199, 132, 0.2) 0%, transparent 50%),
+linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+color: var(--text-primary);
+line-height: 1.5;
+min-height: 100vh;
+}
+
+.container {
+max-width: 1200px;
+margin: 0 auto;
+padding: 2rem 1rem;
+}
+
+.header {
+text-align: center;
+margin-bottom: 2rem;
+}
+
+.header h1 {
+font-size: 2rem;
+font-weight: 600;
+color: var(--ocean-deep);
+margin-bottom: 0.5rem;
+}
+
+.header p {
+color: var(--text-secondary);
+font-size: 1rem;
+max-width: 600px;
+margin: 0 auto;
+}
+
+.main-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 2rem;
+margin-bottom: 2rem;
+}
+
+.card {
+background: var(--glass-white);
+backdrop-filter: blur(20px);
+-webkit-backdrop-filter: blur(20px);
+border: 1px solid var(--glass-border);
+border-radius: 24px;
+padding: 1.5rem;
+box-shadow: var(--shadow-soft);
+transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+position: relative;
+overflow: hidden;
+}
+
+.card::before {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+height: 1px;
+background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+}
+
+.card:hover {
+transform: translateY(-8px);
+box-shadow: var(--shadow-glow);
+border-color: rgba(77, 208, 225, 0.3);
+}
+
+.card-title {
+font-size: 1rem;
+font-weight: 600;
+color: var(--text-primary);
+margin-bottom: 1rem;
+display: flex;
+align-items: center;
+gap: 0.5rem;
+}
+
+.record-section {
+text-align: center;
+}
+
+.instructions {
+background: rgba(77, 208, 225, 0.1);
+border: 1px solid rgba(77, 208, 225, 0.2);
+padding: 1rem;
+border-radius: 16px;
+margin-bottom: 1.5rem;
+font-size: 0.875rem;
+color: var(--ocean-deep);
+}
+
+.instructions-title {
+font-weight: 600;
+margin-bottom: 0.5rem;
+color: var(--ocean-deep);
+}
+
+.record-button {
+width: 100px;
+height: 100px;
+border-radius: 50%;
+border: none;
+background: linear-gradient(135deg, var(--coral-pink), var(--sunset-orange));
+color: white;
+font-size: 0.875rem;
+font-weight: 500;
+cursor: pointer;
+transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+box-shadow: 0 8px 32px rgba(255, 112, 67, 0.3);
+margin: 1rem auto;
+display: flex;
+align-items: center;
+justify-content: center;
+text-align: center;
+position: relative;
+overflow: hidden;
+}
+
+.record-button::before {
+content: '';
+position: absolute;
+top: 50%;
+left: 50%;
+width: 0;
+height: 0;
+background: rgba(255, 255, 255, 0.2);
+border-radius: 50%;
+transition: all 0.3s ease;
+transform: translate(-50%, -50%);
+}
+
+.record-button:hover::before {
+width: 100%;
+height: 100%;
+}
+
+.record-button:hover {
+transform: scale(1.05);
+box-shadow: 0 12px 48px rgba(255, 112, 67, 0.4);
+}
+
+.record-button.recording {
+background: linear-gradient(135deg, #e74c3c, #c0392b);
+animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+0% { box-shadow: 0 0 0 0 rgba(207, 34, 46, 0.4); }
+70% { box-shadow: 0 0 0 10px rgba(207, 34, 46, 0); }
+100% { box-shadow: 0 0 0 0 rgba(207, 34, 46, 0); }
+}
+
+.timer {
+font-family: 'JetBrains Mono', monospace;
+font-size: 1.25rem;
+font-weight: 500;
+color: var(--coral-pink);
+margin: 1rem 0;
+opacity: 0;
+transform: translateY(10px);
+transition: all 0.3s ease;
+}
+
+.timer.visible {
+opacity: 1;
+transform: translateY(0);
+}
+
+.audio-controls {
+margin-top: 1rem;
+opacity: 0;
+transform: translateY(10px);
+transition: all 0.3s ease;
+}
+
+.audio-controls.visible {
+opacity: 1;
+transform: translateY(0);
+}
+
+.audio-controls audio {
+width: 100%;
+margin-bottom: 0.5rem;
+}
+
+.download-btn {
+background: linear-gradient(135deg, var(--caribbean-blue), var(--tropical-teal));
+color: white;
+border: none;
+padding: 0.5rem 1rem;
+border-radius: 12px;
+font-size: 0.875rem;
+font-weight: 500;
+cursor: pointer;
+transition: all 0.2s ease;
+text-decoration: none;
+display: inline-block;
+}
+
+.download-btn:hover {
+transform: translateY(-2px);
+box-shadow: 0 8px 25px rgba(77, 208, 225, 0.3);
+}
+
+.upload-zone {
+border: 2px dashed var(--glass-border);
+border-radius: 16px;
+padding: 2rem 1rem;
+text-align: center;
+transition: all 0.3s ease;
+cursor: pointer;
+position: relative;
+overflow: hidden;
+}
+
+.upload-zone::before {
+content: '';
+position: absolute;
+top: 0;
+left: -100%;
+width: 100%;
+height: 100%;
+background: linear-gradient(90deg, transparent, rgba(77, 208, 225, 0.1), transparent);
+transition: all 0.6s ease;
+}
+
+.upload-zone:hover::before {
+left: 100%;
+}
+
+.upload-zone:hover {
+border-color: var(--caribbean-blue);
+background: rgba(77, 208, 225, 0.05);
+}
+
+.upload-zone h3 {
+margin-bottom: 0.5rem;
+color: var(--text-primary);
+font-size: 1rem;
+font-weight: 500;
+}
+
+.upload-zone p {
+color: var(--text-secondary);
+margin-bottom: 1rem;
+font-size: 0.875rem;
+}
+
+.upload-button {
+background: linear-gradient(135deg, var(--caribbean-blue), var(--tropical-teal));
+color: white;
+border: none;
+padding: 0.75rem 1.5rem;
+border-radius: 12px;
+font-weight: 500;
+cursor: pointer;
+transition: all 0.3s ease;
+font-size: 0.875rem;
+}
+
+.upload-button:hover {
+transform: translateY(-2px);
+box-shadow: 0 8px 25px rgba(77, 208, 225, 0.3);
+}
+
+.analysis-grid {
+display: grid;
+grid-template-columns: 2fr 1fr;
+gap: 2rem;
+margin-bottom: 2rem;
+}
+
+.waveform-container {
+height: 300px;
+border-radius: 8px;
+overflow: hidden;
+position: relative;
+}
+
+.waveform-container canvas {
+border-radius: 8px;
+}
+
+.results-panel {
+opacity: 0;
+transform: translateY(20px);
+transition: all 0.5s ease;
+}
+
+.results-panel.visible {
+opacity: 1;
+transform: translateY(0);
+}
+
+.classification-result {
+background: var(--neutral-100);
+border: 1px solid var(--border-color-muted);
+border-radius: 6px;
+padding: 1rem;
+text-align: center;
+margin-bottom: 1rem;
+}
+
+.classification-display {
+font-size: 1.5rem;
+font-weight: 600;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+margin-bottom: 0.5rem;
+}
+
+.classification-display.healthy {
+color: var(--mint-fresh);
+}
+
+.classification-display.murmur {
+color: var(--coral-pink);
+}
+
+.classification-display.artifact {
+color: var(--sunset-orange);
+}
+
+.confidence-bar {
+height: 8px;
+background: rgba(255, 255, 255, 0.2);
+border-radius: 4px;
+overflow: hidden;
+margin: 0.75rem 0;
+position: relative;
+}
+
+.confidence-fill {
+height: 100%;
+background: linear-gradient(90deg, var(--caribbean-blue), var(--tropical-teal));
+border-radius: 4px;
+transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+position: relative;
+overflow: hidden;
+}
+
+.confidence-fill::after {
+content: '';
+position: absolute;
+top: 0;
+left: -100%;
+width: 100%;
+height: 100%;
+background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+100% { left: 100%; }
+}
+
+.confidence-text {
+font-size: 0.875rem;
+color: var(--text-secondary);
+font-weight: 500;
+}
+
+.metrics-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 0.75rem;
+}
+
+.metric-item {
+background: rgba(255, 255, 255, 0.05);
+border: 1px solid rgba(255, 255, 255, 0.1);
+padding: 0.75rem;
+border-radius: 12px;
+text-align: center;
+}
+
+.metric-value {
+font-size: 1.25rem;
+font-weight: 600;
+color: var(--caribbean-blue);
+font-family: 'JetBrains Mono', monospace;
+}
+
+.metric-label {
+font-size: 0.75rem;
+color: var(--text-secondary);
+margin-top: 0.25rem;
+font-weight: 500;
+text-transform: uppercase;
+letter-spacing: 0.025em;
+}
+
+.signal-quality {
+margin-bottom: 1rem;
+}
+
+.signal-quality-display {
+font-size: 1rem;
+font-weight: 600;
+text-transform: uppercase;
+padding: 0.5rem;
+border-radius: 4px;
+text-align: center;
+margin-bottom: 0.5rem;
+}
+
+.signal-quality-display.excellent,
+.signal-quality-display.good {
+background: rgba(129, 199, 132, 0.1);
+color: var(--mint-fresh);
+border: 1px solid rgba(129, 199, 132, 0.2);
+}
+
+.signal-quality-display.fair {
+background: rgba(255, 183, 77, 0.1);
+color: var(--sunset-orange);
+border: 1px solid rgba(255, 183, 77, 0.2);
+}
+
+.signal-quality-display.poor {
+background: rgba(255, 112, 67, 0.1);
+color: var(--coral-pink);
+border: 1px solid rgba(255, 112, 67, 0.2);
+}
+
+.loading-overlay {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background: rgba(255, 255, 255, 0.95);
+display: none;
+align-items: center;
+justify-content: center;
+z-index: 1000;
+}
+
+.loading-spinner {
+width: 32px;
+height: 32px;
+border: 2px solid rgba(77, 208, 225, 0.2);
+border-top: 2px solid var(--caribbean-blue);
+border-radius: 50%;
+animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+
+.error-message {
+background: rgba(255, 112, 67, 0.1);
+border: 1px solid rgba(255, 112, 67, 0.2);
+color: var(--coral-pink);
+padding: 1rem;
+border-radius: 16px;
+margin: 1rem 0;
+opacity: 0;
+transform: translateY(-10px);
+transition: all 0.3s ease;
+}
+
+.error-message.visible {
+opacity: 1;
+transform: translateY(0);
+}
+
+.processing-indicator {
+position: absolute;
+color: white;
+font-weight: 500;
+opacity: 0;
+transition: all 0.3s ease;
+font-size: 0.75rem;
+}
+
+.record-button.processing .processing-indicator {
+opacity: 1;
+}
+
+@media (max-width: 768px) {
+.main-grid,
+.analysis-grid {
+grid-template-columns: 1fr;
+}
+
+.container {
+padding: 1rem;
+}
+
+.card {
+padding: 1rem;
+}
+
+.metrics-grid {
+grid-template-columns: 1fr;
+}
+}
+
+.icon {
+width: 16px;
+height: 16px;
+display: inline-block;
+}
+
+.processing-time {
+font-size: 0.75rem;
+color: var(--text-secondary);
+margin-top: 0.5rem;
+font-family: 'JetBrains Mono', monospace;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>HeartScope AI</h1>
+<p>Advanced phonocardiogram analysis powered by machine learning. Record, analyze, and understand heart sounds in real-time.</p>
+</div>
+
+<div class="main-grid">
+<!-- Recording Section -->
+<div class="card record-section">
+<h2 class="card-title">Live Recording</h2>
+
+<div class="instructions">
+<div class="instructions-title">Recording Instructions</div>
+<p>Place your device's microphone near the chest area. Record for 10 seconds in a quiet environment for optimal results.</p>
+</div>
+
+<button id="recordButton" class="record-button">
+<span class="button-text">Start Recording</span>
+<div class="processing-indicator">Processing...</div>
+</button>
+
+<div id="timer" class="timer">00:00</div>
+
+<div id="audioControls" class="audio-controls">
+<audio id="audioPlayer" controls></audio>
+<a id="downloadBtn" class="download-btn" download="heart-recording.wav">Download Recording</a>
+</div>
+</div>
+
+<!-- Upload Section -->
+<div class="card">
+<h2 class="card-title">File Upload</h2>
+
+<div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+<h3>Upload Audio File</h3>
+<p>Drag & drop or click to select WAV, MP3, or FLAC files</p>
+<button class="upload-button">Choose File</button>
+</div>
+
+<input type="file" id="fileInput" accept=".wav,.mp3,.flac" style="display: none;">
+</div>
+</div>
+
+<!-- Error Display -->
+<div id="errorMessage" class="error-message"></div>
+
+<!-- Analysis Section -->
+<div class="analysis-grid">
+<!-- Waveform Visualization -->
+<div class="card waveform-container">
+<canvas id="waveformChart"></canvas>
+</div>
+
+<!-- Results Panel -->
+<div id="resultsPanel" class="card results-panel">
+<h3 class="card-title">Analysis Results</h3>
+
+<!-- Classification -->
+<div class="classification-result">
+<div id="classificationResult" class="classification-display">---</div>
+<div class="confidence-bar">
+<div id="confidenceFill" class="confidence-fill" style="width: 0%;"></div>
+</div>
+<div id="confidenceText" class="confidence-text">Confidence: 0%</div>
+</div>
+
+<!-- Signal Quality -->
+<div class="signal-quality">
+<div class="metric-label">Signal Quality</div>
+<div id="signalQuality" class="signal-quality-display">---</div>
+<div id="processingTime" class="processing-time">Processing time: --- ms</div>
+</div>
+
+<!-- Heart Metrics -->
+<div class="metrics-grid">
+<div class="metric-item">
+<div id="heartRate" class="metric-value">---</div>
+<div class="metric-label">Heart Rate (BPM)</div>
+</div>
+<div class="metric-item">
+<div id="audioLength" class="metric-value">---</div>
+<div class="metric-label">Duration (sec)</div>
+</div>
+<div class="metric-item">
+<div id="s1Count" class="metric-value">---</div>
+<div class="metric-label">S1 Sounds</div>
+</div>
+<div class="metric-item">
+<div id="s2Count" class="metric-value">---</div>
+<div class="metric-label">S2 Sounds</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+<div>
+<div class="loading-spinner"></div>
+<p style="margin-top: 1rem; color: var(--text-secondary); font-weight: 500;">
+Analyzing heart sounds...
+</p>
+</div>
+</div>
+
+<script>
+class HeartScopeAI {
+constructor() {
+this.mediaRecorder = null;
+this.audioChunks = [];
+this.isRecording = false;
+this.recordingTimer = null;
+this.recordingTime = 0;
+this.chart = null;
+this.apiBaseUrl = window.location.origin.includes('localhost') 
+    ? 'http://localhost:8000' 
+    : 'https://YOUR-APP-NAME.onrender.com';  // We'll change this soothis.recordedAudioBlob = null;
+
+this.initializeEventListeners();
+this.initializeChart();
+}
+
+initializeEventListeners() {
+document.getElementById('recordButton').addEventListener('click', () => {
+this.toggleRecording();
+});
+
+document.getElementById('fileInput').addEventListener('change', (e) => {
+if (e.target.files.length > 0) {
+this.uploadFile(e.target.files[0]);
+}
+});
+
+// Drag and drop functionality
+const uploadZone = document.querySelector('.upload-zone');
+
+uploadZone.addEventListener('dragover', (e) => {
+e.preventDefault();
+uploadZone.style.borderColor = 'var(--primary-blue)';
+uploadZone.style.background = 'var(--neutral-100)';
+});
+
+uploadZone.addEventListener('dragleave', (e) => {
+e.preventDefault();
+uploadZone.style.borderColor = 'var(--border-color)';
+uploadZone.style.background = 'transparent';
+});
+
+uploadZone.addEventListener('drop', (e) => {
+e.preventDefault();
+uploadZone.style.borderColor = 'var(--border-color)';
+uploadZone.style.background = 'transparent';
+
+const files = e.dataTransfer.files;
+if (files.length > 0) {
+this.uploadFile(files[0]);
+}
+});
+}
+
+initializeChart() {
+const ctx = document.getElementById('waveformChart').getContext('2d');
+this.chart = new Chart(ctx, {
+type: 'line',
+data: {
+labels: [],
+datasets: [{
+label: 'Heart Sound Waveform',
+data: [],
+borderColor: '#4DD0E1',
+backgroundColor: 'rgba(77, 208, 225, 0.1)',
+borderWidth: 1.5,
+pointRadius: 0,
+tension: 0.1,
+fill: true
+}]
+},
+options: {
+responsive: true,
+maintainAspectRatio: false,
+plugins: {
+legend: { display: false }
+},
+scales: {
+x: {
+    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+    ticks: { color: '#4A5568', font: { size: 11 } },
+    title: {
+        display: true,
+        text: 'Time (seconds)',
+        color: '#4A5568',
+        font: { size: 12, weight: '500' }
+    }
+},
+y: {
+    grid: { color: 'rgba(255, 255, 255, 0.1)' },
+    ticks: { color: '#4A5568', font: { size: 11 } },
+    title: {
+        display: true,
+        text: 'Amplitude',
+        color: '#4A5568',
+        font: { size: 12, weight: '500' }
+    }
+}
+}
+}
+});
+};
+
+async toggleRecording() {
+if (!this.isRecording) {
+await this.startRecording();
+} else {
+this.stopRecording();
+}
+}
+
+async startRecording() {
+try {
+const stream = await navigator.mediaDevices.getUserMedia({ 
+audio: {
+sampleRate: 44100,
+channelCount: 1,
+echoCancellation: false,
+noiseSuppression: false
+} 
+});
+
+this.mediaRecorder = new MediaRecorder(stream);
+this.audioChunks = [];
+
+this.mediaRecorder.ondataavailable = (event) => {
+this.audioChunks.push(event.data);
+};
+
+this.mediaRecorder.onstop = () => {
+this.processRecording();
+};
+
+this.mediaRecorder.start();
+this.isRecording = true;
+this.recordingTime = 0;
+
+this.updateRecordingUI(true);
+this.startTimer();
+
+// Hide audio controls while recording
+document.getElementById('audioControls').classList.remove('visible');
+
+// Auto-stop after 10 seconds
+setTimeout(() => {
+if (this.isRecording) {
+this.stopRecording();
+}
+}, 10000);
+
+} catch (error) {
+this.showError('Microphone access denied. Please allow microphone access and try again.');
+}
+}
+
+stopRecording() {
+if (this.mediaRecorder && this.isRecording) {
+this.mediaRecorder.stop();
+this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+this.isRecording = false;
+this.updateRecordingUI(false);
+this.stopTimer();
+}
+}
+
+startTimer() {
+const timerElement = document.getElementById('timer');
+timerElement.classList.add('visible');
+
+this.recordingTimer = setInterval(() => {
+this.recordingTime++;
+const minutes = Math.floor(this.recordingTime / 60);
+const seconds = this.recordingTime % 60;
+timerElement.textContent = 
+`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}, 1000);
+}
+
+stopTimer() {
+if (this.recordingTimer) {
+clearInterval(this.recordingTimer);
+this.recordingTimer = null;
+}
+document.getElementById('timer').classList.remove('visible');
+}
+
+updateRecordingUI(isRecording) {
+const button = document.getElementById('recordButton');
+const buttonText = button.querySelector('.button-text');
+
+if (isRecording) {
+button.classList.add('recording');
+buttonText.textContent = 'Stop Recording';
+} else {
+button.classList.remove('recording');
+buttonText.textContent = 'Start Recording';
+}
+}
+
+setupAudioPlayback(audioBlob) {
+this.recordedAudioBlob = audioBlob;
+const audioPlayer = document.getElementById('audioPlayer');
+const downloadBtn = document.getElementById('downloadBtn');
+const audioControls = document.getElementById('audioControls');
+
+// Create audio URL
+const audioUrl = URL.createObjectURL(audioBlob);
+audioPlayer.src = audioUrl;
+downloadBtn.href = audioUrl;
+
+// Show audio controls
+audioControls.classList.add('visible');
+}
+
+async processRecording() {
+const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
+
+// Setup audio playback
+this.setupAudioPlayback(audioBlob);
+
+try {
+// Convert to audio array for visualization and analysis
+const arrayBuffer = await audioBlob.arrayBuffer();
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+// Get audio data and ACTUAL sample rate
+const audioData = audioBuffer.getChannelData(0);
+const actualSampleRate = audioBuffer.sampleRate;
+
+console.log('🎵 Recorded audio info:');
+console.log('   Actual sample rate:', actualSampleRate);
+console.log('   Duration:', audioBuffer.duration, 'seconds');
+console.log('   Array length:', audioData.length);
+
+// Update waveform with actual sample rate
+this.updateWaveform(audioData, actualSampleRate);
+
+// Send for analysis with BOTH audio data AND sample rate info
+await this.analyzeAudio(Array.from(audioData), actualSampleRate);
+} catch (error) {
+this.showError('Error processing recording: ' + error.message);
+}
+}
+
+async uploadFile(file) {
+if (!file) return;
+
+this.showLoading(true);
+this.hideError();
+
+try {
+// Read file and display waveform
+const arrayBuffer = await file.arrayBuffer();
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+const audioData = audioBuffer.getChannelData(0);
+
+this.updateWaveform(audioData, audioBuffer.sampleRate);
+
+// Send file to API
+const formData = new FormData();
+formData.append('file', file);
+
+const response = await fetch(`${this.apiBaseUrl}/analyze`, {
+method: 'POST',
+body: formData
+});
+
+if (!response.ok) {
+throw new Error(`Analysis failed: ${response.status}`);
+}
+
+const result = await response.json();
+this.displayResults(result);
+
+} catch (error) {
+this.showError('Error uploading file: ' + error.message);
+} finally {
+this.showLoading(false);
+}
+}
+
+async analyzeAudio(audioArray, sampleRate) {
+this.showLoading(true);
+this.hideError();
+
+try {
+const response = await fetch(`${this.apiBaseUrl}/analyze-realtime`, {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+},
+body: JSON.stringify({
+audio_data: audioArray,
+sample_rate: sampleRate
+})
+});
+
+if (!response.ok) {
+throw new Error(`Analysis failed: ${response.status}`);
+}
+
+const result = await response.json();
+this.displayResults(result);
+
+} catch (error) {
+this.showError('Error analyzing audio: ' + error.message);
+} finally {
+this.showLoading(false);
+}
+}
+
+updateWaveform(audioData, sampleRate) {
+// Downsample for visualization (show every 100th sample for performance)
+const downsampleRate = Math.max(1, Math.floor(audioData.length / 1000));
+const labels = [];
+const data = [];
+
+for (let i = 0; i < audioData.length; i += downsampleRate) {
+labels.push((i / sampleRate).toFixed(2));
+data.push(audioData[i]);
+}
+
+this.chart.data.labels = labels;
+this.chart.data.datasets[0].data = data;
+this.chart.update('none'); // No animation for performance
+}
+
+displayResults(result) {
+const resultsPanel = document.getElementById('resultsPanel');
+resultsPanel.classList.add('visible');
+
+// Classification with animation
+const classification = document.getElementById('classificationResult');
+classification.textContent = result.classification.toUpperCase();
+classification.className = `classification-display ${result.classification}`;
+
+// Confidence with smooth animation
+const confidence = Math.round(result.confidence * 100);
+const confidenceFill = document.getElementById('confidenceFill');
+const confidenceText = document.getElementById('confidenceText');
+
+// Animate confidence bar
+setTimeout(() => {
+confidenceFill.style.width = `${confidence}%`;
+}, 300);
+
+confidenceText.textContent = `Confidence: ${confidence}%`;
+
+// Signal Quality with color coding
+const signalQuality = document.getElementById('signalQuality');
+signalQuality.textContent = result.signal_quality.toUpperCase();
+signalQuality.className = `signal-quality-display ${result.signal_quality.toLowerCase()}`;
+
+// Update heart metrics - hide S1/S2 counts if artifact is detected
+document.getElementById('heartRate').textContent = 
+result.heart_rate ? Math.round(result.heart_rate) : '---';
+
+// Only show S1/S2 counts if not artifact
+if (result.classification.toLowerCase() !== 'artifact') {
+document.getElementById('s1Count').textContent = result.s1_count;
+document.getElementById('s2Count').textContent = result.s2_count;
+} else {
+// Hide S1/S2 count elements for artifact classification
+document.getElementById('s1Count').parentElement.style.display = 'none';
+document.getElementById('s2Count').parentElement.style.display = 'none';
+}
+
+document.getElementById('processingTime').textContent = 
+`Processing time: ${Math.round(result.processing_time_ms)} ms`;
+
+// Audio duration
+const duration = result.metadata.duration || result.metadata.original_duration || 0;
+document.getElementById('audioLength').textContent = duration.toFixed(1);
+}
+
+showLoading(show) {
+const overlay = document.getElementById('loadingOverlay');
+if (show) {
+overlay.style.display = 'flex';
+// Add slight delay for smooth transition
+setTimeout(() => {
+overlay.style.opacity = '1';
+}, 10);
+} else {
+overlay.style.opacity = '0';
+setTimeout(() => {
+overlay.style.display = 'none';
+}, 300);
+}
+}
+
+showError(message) {
+const errorDiv = document.getElementById('errorMessage');
+errorDiv.textContent = message;
+errorDiv.classList.add('visible');
+
+// Auto-hide after 5 seconds
+setTimeout(() => {
+this.hideError();
+}, 5000);
+}
+
+hideError() {
+const errorDiv = document.getElementById('errorMessage');
+errorDiv.classList.remove('visible');
+}
+}
+
+// Initialize the application when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+new HeartScopeAI();
+
+// Add some interactive polish
+document.querySelectorAll('.card').forEach(card => {
+card.addEventListener('mouseenter', () => {
+card.style.transform = 'translateY(-2px)';
+});
+
+card.addEventListener('mouseleave', () => {
+card.style.transform = 'translateY(0)';
+});
+});
+
+// Smooth reveal animation on load
+setTimeout(() => {
+document.querySelectorAll('.card').forEach((card, index) => {
+setTimeout(() => {
+card.style.opacity = '1';
+card.style.transform = 'translateY(0)';
+}, index * 100);
+});
+}, 200);
+});
+
+// Add initial loading state
+document.querySelectorAll('.card').forEach(card => {
+card.style.opacity = '0';
+card.style.transform = 'translateY(10px)';
+card.style.transition = 'all 0.4s ease';
+});
+</script>
+</body>
+</html>
+}
