@@ -57,7 +57,10 @@ async def options_handler(request: Request, path: str):
 if Path("frontend").exists():
     app.mount("/static", StaticFiles(directory="frontend"), name="static")
     logger.info("✅ Frontend mounted at /static")
+from fastapi.staticfiles import StaticFiles
 
+# Add this line after your existing mounts
+app.mount("/img", StaticFiles(directory="frontend/img"), name="images")
 # Response models
 class PCGAnalysisResult(BaseModel):
     classification: str
