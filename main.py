@@ -29,11 +29,29 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://lubdub-ai.netlify.app",  # Your Netlify domain
+        "http://localhost:3000",         # Local development
+        "http://localhost:8000",         # Local backend
+        "http://127.0.0.1:8000",        # Alternative local
+        "*"                              # Allow all (for development)
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+@app.options("/{path:path}")
+async def options_handler(request: Request, path: str):
+    """Handle CORS preflight requests"""
+    return JSONResponse(
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 # Serve static files (frontend)
 if Path("frontend").exists():
