@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Medical Analysis Suite</title>
+<link href="https://fonts.googleapis.com/css2?family=Tiempos:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+/* Dark theme colors */
+--bg-primary: #0D1117;
+--bg-secondary: #161B22;
+--bg-tertiary: #21262D;
+--bg-card: #1C2128;
+--border-primary: #30363D;
+--border-focus: #58A6FF;
+
+--text-primary: #F0F6FC;
+--text-secondary: #8B949E;
+--text-muted: #656D76;
+
+--accent-primary: #ffffff;
+--accent-secondary: #1F6FEB;
+--accent-success: #2EA043;
+--accent-warning: #FB8500;
+--accent-danger: #F85149;
+
+--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.15);
+--shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.25);
+
+--glass-bg: rgba(28, 33, 40, 0.8);
+--glass-border: rgba(48, 54, 61, 0.5);
+}
+
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+}
+
+body {
+font-family: 'Tiempos', Georgia, sans-serif;
+background: linear-gradient(rgba(13, 17, 23, 0.9), rgba(13, 17, 23, 0.9)), url('img/bg.avif') center/cover no-repeat, var(--bg-primary);
+color: var(--text-primary);
+line-height: 1.6;
+min-height: 100vh;
+font-size: 19px;
+}
+
+.container {
+max-width: 1200px;
+margin: 0 auto;
+padding: 2rem 1rem;
+}
+
+.header {
+text-align: center;
+margin-bottom: 3rem;
+padding: 2rem 0;
+}
+
+.header h1 {
+font-size: 3.5rem;
+font-weight: 700;
+color: var(--text-primary);
+margin-bottom: 1rem;
+background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+}
+
+.header p {
+color: var(--text-secondary);
+font-size: 1.35rem;
+max-width: 700px;
+margin: 0 auto;
+line-height: 1.6;
+}
+
+.applications-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+gap: 2rem;
+margin-bottom: 3rem;
+}
+
+.app-card {
+background: var(--glass-bg);
+backdrop-filter: blur(20px);
+-webkit-backdrop-filter: blur(20px);
+border: 1px solid var(--glass-border);
+border-radius: 16px;
+padding: 2rem;
+box-shadow: var(--shadow-md);
+transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+position: relative;
+overflow: hidden;
+cursor: pointer;
+text-decoration: none;
+display: block;
+}
+
+.app-card::before {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+height: 2px;
+background: linear-gradient(90deg, transparent, var(--border-focus), transparent);
+opacity: 0;
+transition: opacity 0.3s ease;
+}
+
+.app-card:hover {
+transform: translateY(-6px);
+box-shadow: var(--shadow-lg);
+border-color: var(--border-focus);
+}
+
+.app-card:hover::before {
+opacity: 1;
+}
+
+.app-card:hover .app-icon {
+transform: scale(1.1);
+}
+
+.app-icon {
+width: 80px;
+height: 80px;
+margin: 0 auto 1.5rem;
+display: flex;
+align-items: center;
+justify-content: center;
+border-radius: 20px;
+transition: transform 0.3s ease;
+font-size: 2.5rem;
+}
+
+.app-icon.pcg {
+background: linear-gradient(135deg, #F85149, #FB8500);
+}
+
+.app-icon.rppg {
+background: linear-gradient(135deg, #58A6FF, #1F6FEB);
+}
+
+.app-icon.ecg {
+background: linear-gradient(135deg, #2EA043, #238636);
+}
+
+.app-icon.xray {
+background: linear-gradient(135deg, #8957E5, #6E40C9);
+}
+
+.app-title {
+font-size: 1.75rem;
+font-weight: 600;
+color: var(--text-primary);
+margin-bottom: 1rem;
+text-align: center;
+}
+
+.app-description {
+color: var(--text-secondary);
+font-size: 1.1rem;
+line-height: 1.6;
+text-align: center;
+margin-bottom: 1.5rem;
+}
+
+.app-features {
+list-style: none;
+padding: 0;
+margin: 0;
+}
+
+.app-features li {
+color: var(--text-muted);
+font-size: 0.95rem;
+padding: 0.5rem 0;
+padding-left: 1.5rem;
+position: relative;
+}
+
+.app-features li::before {
+content: '✓';
+position: absolute;
+left: 0;
+color: var(--accent-success);
+font-weight: bold;
+}
+
+.app-status {
+position: absolute;
+top: 1rem;
+right: 1rem;
+padding: 0.25rem 0.75rem;
+border-radius: 20px;
+font-size: 0.75rem;
+font-weight: 600;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+}
+
+.app-status.active {
+background: rgba(46, 160, 67, 0.15);
+color: var(--accent-success);
+border: 1px solid rgba(46, 160, 67, 0.3);
+}
+
+.app-status.coming-soon {
+background: rgba(251, 133, 0, 0.15);
+color: var(--accent-warning);
+border: 1px solid rgba(251, 133, 0, 0.3);
+}
+
+.info-section {
+background: var(--bg-secondary);
+border: 1px solid var(--border-primary);
+border-radius: 16px;
+padding: 2.5rem;
+margin: 3rem 0;
+text-align: center;
+}
+
+.info-section h2 {
+font-size: 2rem;
+color: var(--text-primary);
+margin-bottom: 1.5rem;
+}
+
+.info-section p {
+color: var(--text-secondary);
+font-size: 1.15rem;
+line-height: 1.7;
+max-width: 800px;
+margin: 0 auto 1rem;
+}
+
+.footer {
+margin-top: 4rem;
+padding: 2rem 0;
+border-top: 1px solid var(--border-primary);
+text-align: center;
+background: var(--bg-secondary);
+}
+
+.footer-content {
+max-width: 1200px;
+margin: 0 auto;
+padding: 0 1rem;
+}
+
+.footer p {
+color: var(--text-secondary);
+font-size: 0.95rem;
+margin-bottom: 1rem;
+}
+
+.contact-email {
+color: var(--accent-primary);
+text-decoration: none;
+font-weight: 500;
+transition: color 0.2s ease;
+}
+
+.contact-email:hover {
+color: var(--accent-secondary);
+}
+
+/* Loading animation */
+.loading-dots {
+display: inline-block;
+}
+
+.loading-dots::after {
+content: '...';
+animation: dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes dots {
+0%, 20% { content: ''; }
+40% { content: '.'; }
+60% { content: '..'; }
+80%, 100% { content: '...'; }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+.applications-grid {
+grid-template-columns: 1fr;
+}
+
+.header h1 {
+font-size: 2.5rem;
+}
+
+.header p {
+font-size: 1.1rem;
+}
+
+.app-title {
+font-size: 1.5rem;
+}
+
+.info-section {
+padding: 1.5rem;
+}
+}
+
+/* Entry animations */
+@keyframes fadeInUp {
+from {
+opacity: 0;
+transform: translateY(20px);
+}
+to {
+opacity: 1;
+transform: translateY(0);
+}
+}
+
+.app-card {
+animation: fadeInUp 0.6s ease-out backwards;
+}
+
+.app-card:nth-child(1) { animation-delay: 0.1s; }
+.app-card:nth-child(2) { animation-delay: 0.2s; }
+.app-card:nth-child(3) { animation-delay: 0.3s; }
+.app-card:nth-child(4) { animation-delay: 0.4s; }
+</style>
+</head>
+<body>
+<div class="container">
+<!-- Header -->
+<div class="header">
+<h1>Medical Analysis Suite</h1>
+<p>Advanced AI-powered medical signal analysis tools for healthcare professionals and researchers</p>
+</div>
+
+<!-- Applications Grid -->
+<div class="applications-grid">
+<!-- PCG Classification -->
+<a href="/pcg" class="app-card">
+<span class="app-status active">Active</span>
+<div class="app-icon pcg">
+<span>🫀</span>
+</div>
+<h2 class="app-title">PCG Classification</h2>
+<p class="app-description">
+Advanced phonocardiogram analysis using machine learning to detect heart murmurs and artifacts
+</p>
+<ul class="app-features">
+<li>Real-time recording & analysis</li>
+<li>Murmur detection</li>
+<li>Heart rate calculation</li>
+<li>S1/S2 sound identification</li>
+</ul>
+</a>
+
+<!-- rPPG Analyzer -->
+<a href="/rppg" class="app-card">
+<span class="app-status active">Active</span>
+<div class="app-icon rppg">
+<span>📹</span>
+</div>
+<h2 class="app-title">rPPG Analyzer</h2>
+<p class="app-description">
+Remote photoplethysmography for contactless vital signs monitoring from video
+</p>
+<ul class="app-features">
+<li>Contactless heart rate detection</li>
+<li>Blood oxygen estimation</li>
+<li>Respiratory rate monitoring</li>
+<li>Real-time video analysis</li>
+</ul>
+</a>
+
+<!-- ECG Analysis -->
+<a href="/ecg" class="app-card">
+<span class="app-status coming-soon">Coming Soon</span>
+<div class="app-icon ecg">
+<span>📊</span>
+</div>
+<h2 class="app-title">ECG Analysis</h2>
+<p class="app-description">
+Electrocardiogram interpretation and arrhythmia detection
+</p>
+<ul class="app-features">
+<li>Arrhythmia detection</li>
+<li>QRS complex analysis</li>
+<li>Heart rate variability</li>
+<li>Automated reporting</li>
+</ul>
+</a>
+
+<!-- X-Ray Analysis -->
+<a href="/xray" class="app-card">
+<span class="app-status coming-soon">Coming Soon</span>
+<div class="app-icon xray">
+<span>🔍</span>
+</div>
+<h2 class="app-title">X-Ray Analysis</h2>
+<p class="app-description">
+AI-powered chest X-ray interpretation and abnormality detection
+</p>
+<ul class="app-features">
+<li>Pneumonia detection</li>
+<li>Lung nodule identification</li>
+<li>Fracture detection</li>
+<li>Automated annotations</li>
+</ul>
+</a>
+</div>
+
+<!-- Information Section -->
+<div class="info-section">
+<h2>About This Platform</h2>
+<p>
+Our medical analysis suite leverages cutting-edge artificial intelligence and signal processing 
+techniques to provide accurate, real-time analysis of various medical signals and images.
+</p>
+<p>
+Designed for healthcare professionals, researchers, and educational institutions, 
+these tools aim to assist in medical diagnosis and monitoring while maintaining 
+the highest standards of accuracy and reliability.
+</p>
+<p style="color: var(--accent-warning); font-weight: 500; margin-top: 1.5rem;">
+⚠️ These tools are for educational and research purposes only. 
+Always consult qualified healthcare professionals for medical decisions.
+</p>
+</div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+<div class="footer-content">
+<p>
+Medical Analysis Suite © 2025 | For research and educational purposes only
+</p>
+<p>
+Contact: <a href="mailto:nkk2126@columbia.edu" class="contact-email">nkk2126@columbia.edu</a>
+</p>
+</div>
+</footer>
+
+<script>
+// Add click handlers for coming soon cards
+document.querySelectorAll('.app-card').forEach(card => {
+const status = card.querySelector('.app-status');
+if (status && status.classList.contains('coming-soon')) {
+card.addEventListener('click', (e) => {
+e.preventDefault();
+alert('This feature is coming soon! Check back later for updates.');
+});
+}
+});
+
+// Add subtle hover effects
+document.querySelectorAll('.app-card').forEach(card => {
+card.addEventListener('mouseenter', () => {
+card.style.transform = 'translateY(-6px) scale(1.02)';
+});
+card.addEventListener('mouseleave', () => {
+card.style.transform = 'translateY(0) scale(1)';
+});
+});
+</script>
+</body>
+</html>

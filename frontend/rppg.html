@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rPPG Analyzer • Remote Heart Rate Detection</title>
+<link href="https://fonts.googleapis.com/css2?family=Tiempos:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<style>
+:root {
+    /* Dark theme colors */
+    --bg-primary: #0D1117;
+    --bg-secondary: #161B22;
+    --bg-tertiary: #21262D;
+    --bg-card: #1C2128;
+    --border-primary: #30363D;
+    --border-focus: #5580a5;
+    --text-primary: #C9D1D9;
+    --text-secondary: #8B949E;
+    --accent-blue: #58A6FF;
+    --accent-green: #238636;
+    --accent-red: #da3633;
+    --glow-color: rgba(99, 178, 255, 0.25);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1200px;
+    width: 100%;
+    margin: 2rem;
+    padding: 1rem;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+
+@media (min-width: 1024px) {
+    .container {
+    grid-template-columns: 2fr 1fr;
+    }
+}
+
+.left-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.video-container {
+    position: relative;
+    width: 100%;
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    border: 1px solid var(--border-primary);
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+}
+
+.video-container video, .video-container canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 1.5rem;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 10;
+    border-radius: 12px;
+    display: none;
+}
+
+.controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-primary);
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    background-color: var(--bg-card);
+    border-color: var(--border-focus);
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.file-input-label {
+    display: inline-block;
+}
+
+.file-input {
+    display: none;
+}
+
+.right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.results-panel, .chart-card {
+    background-color: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-primary);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.metric-card {
+    text-align: center;
+    padding: 1rem;
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    background-color: var(--bg-tertiary);
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--accent-blue);
+    font-family: 'Tiempos', serif;
+}
+
+.metric-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.chart-card {
+    position: relative;
+    padding: 1rem;
+}
+
+#loadingOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    font-size: 2rem;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="left-panel">
+        <div class="video-container">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="outputCanvas" width="640" height="480"></canvas>
+            <div id="videoOverlay" class="video-overlay">
+                Camera Feed
+            </div>
+        </div>
+        <div class="controls">
+            <button class="btn" id="startBtn">Start Live Analysis</button>
+            <button class="btn" id="stopBtn" disabled>Stop Analysis</button>
+            <label class="btn file-input-label">
+                Upload Video
+                <input type="file" id="fileInput" class="file-input" accept="video/*">
+            </label>
+        </div>
+    </div>
+    <div class="right-panel">
+        <div id="resultsPanel" class="results-panel" style="display: none;">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div id="heartRate" class="metric-value">--</div>
+                    <div class="metric-label">Heart Rate (BPM)</div>
+                </div>
+                <div class="metric-card">
+                    <div id="respRate" class="metric-value">--</div>
+                    <div class="metric-label">Respiration (BPM)</div>
+                </div>
+                <div class="metric-card">
+                    <div id="hrv" class="metric-value">--</div>
+                    <div class="metric-label">HRV (RMSSD ms)</div>
+                </div>
+                <div class="metric-card">
+                    <div id="confidence" class="metric-value">--</div>
+                    <div class="metric-label">Confidence</div>
+                </div>
+            </div>
+        </div>
+        <div class="chart-card">
+            <canvas id="signalChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <canvas id="respirationChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div id="loadingOverlay">
+    <p>Analyzing video...</p>
+</div>
+
+<script>
+    class RPPGApp {
+        constructor() {
+            this.videoElement = document.getElementById('video');
+            this.canvasElement = document.getElementById('outputCanvas');
+            this.ctx = this.canvasElement.getContext('2d');
+            this.startBtn = document.getElementById('startBtn');
+            this.stopBtn = document.getElementById('stopBtn');
+            this.fileInput = document.getElementById('fileInput');
+            
+            this.apiBaseUrl = '';
+            
+            this.faceMesh = null;
+            this.camera = null;
+            this.signalBuffer = [];
+            this.timeBuffer = [];
+            this.processingInterval = 300;
+            this.lastProcessTime = 0;
+            
+            this.initListeners();
+            this.initFaceMesh();
+            this.initCharts();
+        }
+        
+        initListeners() {
+            this.startBtn.addEventListener('click', () => this.startLiveAnalysis());
+            this.stopBtn.addEventListener('click', () => this.stopLiveAnalysis());
+            this.fileInput.addEventListener('change', (e) => this.uploadVideo(e.target.files[0]));
+        }
+        
+        initFaceMesh() {
+            this.faceMesh = new FaceMesh({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+            }});
+            this.faceMesh.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            this.faceMesh.onResults(this.onResults.bind(this));
+        }
+        
+        initCharts() {
+            // Main Signal Chart
+            const signalCtx = document.getElementById('signalChart').getContext('2d');
+            this.signalChart = new Chart(signalCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'rPPG Signal',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            display: false,
+                        },
+                        y: {
+                            display: false
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Heart Signal (Pulsatile)',
+                            color: 'white',
+                        }
+                    },
+                    animation: false
+                }
+            });
+            
+            // Respiration Signal Chart
+            const respirationCtx = document.getElementById('respirationChart').getContext('2d');
+            this.respirationChart = new Chart(respirationCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Respiration Signal',
+                        data: [],
+                        borderColor: 'rgb(50, 150, 255)',
+                        tension: 0.1,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            display: false,
+                        },
+                        y: {
+                            display: false
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Respiration Signal',
+                            color: 'white',
+                        }
+                    },
+                    animation: false
+                }
+            });
+        }
+    
+        async startLiveAnalysis() {
+            if (this.camera) {
+                this.camera.stop();
+            }
+            this.stopBtn.disabled = false;
+            this.startBtn.disabled = true;
+            document.getElementById('videoOverlay').style.display = 'none';
+            document.getElementById('resultsPanel').style.display = 'flex';
+            
+            this.camera = new Camera(this.videoElement, {
+                onFrame: async () => {
+                    await this.faceMesh.send({image: this.videoElement});
+                },
+                width: 640,
+                height: 480
+            });
+            await this.camera.start();
+        }
+        
+        stopLiveAnalysis() {
+            if (this.camera) {
+                this.camera.stop();
+                this.camera = null;
+            }
+            this.stopBtn.disabled = true;
+            this.startBtn.disabled = false;
+            document.getElementById('videoOverlay').style.display = 'flex';
+            this.signalBuffer = [];
+            this.timeBuffer = [];
+        }
+    
+        onResults(results) {
+            if (!this.videoElement || !this.videoElement.readyState) {
+                return;
+            }
+            
+            this.ctx.save();
+            this.ctx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
+            this.ctx.drawImage(results.image, 0, 0, this.canvasElement.width, this.canvasElement.height);
+            
+            if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                const landmarks = results.multiFaceLandmarks[0];
+                
+                // Define regions using your specific two-landmark method
+                const foreheadRect = this.getRectFromLandmarks(landmarks, 109, 296);
+                const leftEyeRect = this.getRectFromLandmarks(landmarks, 352, 357);
+                const rightEyeRect = this.getRectFromLandmarks(landmarks, 128, 123);
+    
+                // Draw bounding boxes for the defined regions
+                this.drawRect(foreheadRect, 'red');
+                this.drawRect(leftEyeRect, 'green');
+                this.drawRect(rightEyeRect, 'blue');
+                
+                // Extract and combine signals from all three regions
+                const foreheadSignal = this.extractSignal(foreheadRect);
+                const leftEyeSignal = this.extractSignal(leftEyeRect);
+                const rightEyeSignal = this.extractSignal(rightEyeRect);
+                
+                if (foreheadSignal && leftEyeSignal && rightEyeSignal) {
+                    const combinedSignal = [
+                        (foreheadSignal[0] + leftEyeSignal[0] + rightEyeSignal[0]) / 3,
+                        (foreheadSignal[1] + leftEyeSignal[1] + rightEyeSignal[1]) / 3,
+                        (foreheadSignal[2] + leftEyeSignal[2] + rightEyeSignal[2]) / 3
+                    ];
+    
+                    this.signalBuffer.push(combinedSignal);
+                    this.timeBuffer.push(performance.now());
+                    
+                    if (performance.now() - this.lastProcessTime > this.processingInterval && this.signalBuffer.length > 60) {
+                        this.lastProcessTime = performance.now();
+                        this.sendDataForAnalysis();
+                    }
+                }
+            }
+            
+            this.ctx.restore();
+        }
+        
+        getRectFromLandmarks(landmarks, index1, index2) {
+            const p1 = landmarks[index1];
+            const p2 = landmarks[index2];
+            
+            if (!p1 || !p2) {
+                return null;
+            }
+    
+            const x1 = p1.x * this.canvasElement.width;
+            const y1 = p1.y * this.canvasElement.height;
+            const x2 = p2.x * this.canvasElement.width;
+            const y2 = p2.y * this.canvasElement.height;
+            
+            const x = Math.min(x1, x2);
+            const y = Math.min(y1, y2);
+            const width = Math.abs(x1 - x2);
+            const height = Math.abs(y1 - y2);
+            
+            return { x: x, y: y, width: width, height: height };
+        }
+    
+        drawRect(rect, color) {
+            if (!rect) return;
+            this.ctx.strokeStyle = color;
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+        }
+    
+        extractSignal(roi) {
+            if (!roi || roi.width <= 0 || roi.height <= 0) return null;
+            
+            const imageData = this.ctx.getImageData(roi.x, roi.y, roi.width, roi.height);
+            let r = 0, g = 0, b = 0;
+            let count = 0;
+            
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                r += imageData.data[i];
+                g += imageData.data[i+1];
+                b += imageData.data[i+2];
+                count++;
+            }
+            
+            if (count > 0) {
+                return [r / count, g / count, b / count];
+            }
+            return null;
+        }
+    
+        async sendDataForAnalysis() {
+            const payload = {
+                signals: this.signalBuffer,
+                timestamps: this.timeBuffer
+            };
+            
+            this.signalBuffer = [];
+            this.timeBuffer = [];
+            
+            try {
+                const response = await fetch(`${this.apiBaseUrl}/api/rppg/analyze-stream`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Analysis failed on server. Status: ${response.status}, Message: ${errorText}`);
+                }
+                
+                const result = await response.json();
+                if (result.success) {
+                    this.updateDisplay(result);
+                }
+                
+            } catch (err) {
+                console.error('API Error:', err);
+            }
+        }
+        
+        updateDisplay(result) {
+            document.getElementById('heartRate').textContent = result.heart_rate || '--';
+            document.getElementById('hrv').textContent = result.hrv || '--';
+            document.getElementById('respRate').textContent = result.resp_rate || '--';
+            document.getElementById('confidence').textContent = result.confidence || '--';
+            
+            const signalLen = result.signal ? result.signal.length : 0;
+            this.signalChart.data.labels = Array.from({length: signalLen}, (_, i) => i);
+            this.signalChart.data.datasets[0].data = result.signal || [];
+            this.signalChart.update('none');
+            
+            const respLen = result.resp_signal ? result.resp_signal.length : 0;
+            this.respirationChart.data.labels = Array.from({length: respLen}, (_, i) => i);
+            this.respirationChart.data.datasets[0].data = result.resp_signal || [];
+            this.respirationChart.update('none');
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        new RPPGApp();
+    });
+    </script>
+</body>
+</html>

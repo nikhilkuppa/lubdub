@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lubdub-ai • Advanced PCG Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Tiempos:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.js"></script>
+<style>
+:root {
+/* Dark theme colors inspired by Perplexity */
+--bg-primary: #0D1117;
+--bg-secondary: #161B22;
+--bg-tertiary: #21262D;
+--bg-card: #1C2128;
+--bg-input: #0D1117;
+--border-primary: #30363D;
+--border-secondary: #21262D;
+--border-focus: #58A6FF;
+
+--text-primary: #F0F6FC;
+--text-secondary: #8B949E;
+--text-muted: #656D76;
+
+--accent-primary: #ffffff;
+--accent-secondary: #1F6FEB;
+--accent-success: #2EA043;
+--accent-warning: #FB8500;
+--accent-danger: #F85149;
+
+--record-gradient: linear-gradient(135deg, #F85149, #FB8500);
+--upload-gradient: linear-gradient(135deg, #58A6FF, #1F6FEB);
+--success-gradient: linear-gradient(135deg, #2EA043, #238636);
+
+--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.15);
+--shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.25);
+--shadow-glow: 0 0 20px rgba(88, 166, 255, 0.15);
+
+--glass-bg: rgba(28, 33, 40, 0.8);
+--glass-border: rgba(48, 54, 61, 0.5);
+}
+
+* {
+margin: 0;
+padding: 0;
+box-sizing: border-box;
+}
+
+body {
+    font-family: 'Tiempos', Georgia, sans-serif;
+    background: linear-gradient(rgba(13, 17, 23, 0.9), rgba(13, 17, 23, 0.9)), url('img/bg.avif') center/cover no-repeat, var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    font-size: 19px;
+}
+
+.container {
+max-width: 1200px;
+margin: 0 auto;
+padding: 2rem 1rem;
+}
+
+.header {
+text-align: center;
+margin-bottom: 2rem;
+}
+
+.header h1 {
+font-size: 2.9rem;
+font-weight: 700;
+color: var(--text-primary);
+margin-bottom: 0.75rem;
+background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+}
+
+.header p {
+color: var(--text-secondary);
+font-size: 1.25rem;
+max-width: 700px;
+margin: 0 auto;
+}
+
+.main-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 2rem;
+margin-bottom: 2rem;
+}
+
+.card {
+background: var(--glass-bg);
+backdrop-filter: blur(20px);
+-webkit-backdrop-filter: blur(20px);
+border: 1px solid var(--glass-border);
+border-radius: 16px;
+padding: 2rem;
+box-shadow: var(--shadow-md);
+transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+position: relative;
+overflow: hidden;
+}
+
+.card::before {
+content: '';
+position: absolute;
+top: 0;
+left: 0;
+right: 0;
+height: 1px;
+background: linear-gradient(90deg, transparent, var(--border-focus), transparent);
+opacity: 0;
+transition: opacity 0.3s ease;
+}
+
+.card:hover {
+transform: translateY(-4px);
+box-shadow: var(--shadow-lg);
+border-color: var(--border-focus);
+}
+
+.card:hover::before {
+opacity: 1;
+}
+
+.card-title {
+font-size: 1.45rem;
+font-weight: 600;
+color: var(--text-primary);
+margin-bottom: 1.5rem;
+display: flex;
+align-items: center;
+gap: 0.5rem;
+}
+
+.record-section {
+text-align: center;
+}
+
+.instructions {
+background: var(--bg-tertiary);
+border: 1px solid var(--border-primary);
+padding: 1.25rem;
+border-radius: 12px;
+margin-bottom: 1.5rem;
+font-size: 1.25rem;
+color: var(--text-secondary);
+}
+
+.instructions-title {
+font-weight: 600;
+margin-bottom: 0.75rem;
+color: var(--text-primary);
+font-size: 1.45rem;
+}
+
+.record-button {
+width: 120px;
+height: 120px;
+border-radius: 50%;
+border: none;
+background: var(--record-gradient);
+color: white;
+font-size: 0.95rem;
+font-weight: 600;
+cursor: pointer;
+transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+box-shadow: var(--shadow-md);
+margin: 1.5rem auto;
+display: flex;
+align-items: center;
+justify-content: center;
+text-align: center;
+position: relative;
+overflow: hidden;
+}
+
+.record-button::before {
+content: '';
+position: absolute;
+top: 50%;
+left: 50%;
+width: 0;
+height: 0;
+background: rgba(255, 255, 255, 0.2);
+border-radius: 50%;
+transition: all 0.3s ease;
+transform: translate(-50%, -50%);
+}
+
+.record-button:hover::before {
+width: 100%;
+height: 100%;
+}
+
+.record-button:hover {
+transform: scale(1.05);
+box-shadow: var(--shadow-lg);
+}
+
+.record-button.recording {
+background: linear-gradient(135deg, var(--accent-danger), #DA1E37);
+animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+0% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0.4); }
+70% { box-shadow: 0 0 0 15px rgba(248, 81, 73, 0); }
+100% { box-shadow: 0 0 0 0 rgba(248, 81, 73, 0); }
+}
+
+.timer {
+font-family: 'JetBrains Mono', monospace;
+font-size: 1.5rem;
+font-weight: 600;
+color: var(--accent-primary);
+margin: 1rem 0;
+opacity: 0;
+transform: translateY(10px);
+transition: all 0.3s ease;
+}
+
+.timer.visible {
+opacity: 1;
+transform: translateY(0);
+}
+
+.audio-controls {
+margin-top: 1rem;
+opacity: 0;
+transform: translateY(10px);
+transition: all 0.3s ease;
+}
+
+.audio-controls.visible {
+opacity: 1;
+transform: translateY(0);
+}
+
+.audio-controls audio {
+width: 100%;
+margin-bottom: 0.5rem;
+}
+
+.download-btn {
+background: var(--upload-gradient);
+color: white;
+border: none;
+padding: 0.625rem 1.25rem;
+border-radius: 8px;
+font-size: 0.95rem;
+font-weight: 500;
+cursor: pointer;
+transition: all 0.2s ease;
+text-decoration: none;
+display: inline-block;
+}
+
+.download-btn:hover {
+transform: translateY(-2px);
+box-shadow: var(--shadow-md);
+}
+
+.upload-zone {
+border: 2px dashed var(--border-primary);
+background: var(--bg-secondary);
+border-radius: 12px;
+padding: 2rem 1rem;
+text-align: center;
+transition: all 0.3s ease;
+cursor: pointer;
+position: relative;
+overflow: hidden;
+}
+
+.upload-zone::before {
+content: '';
+position: absolute;
+top: 0;
+left: -100%;
+width: 100%;
+height: 100%;
+background: linear-gradient(90deg, transparent, rgba(88, 166, 255, 0.1), transparent);
+transition: all 0.6s ease;
+}
+
+.upload-zone:hover::before {
+left: 100%;
+}
+
+.upload-zone:hover {
+border-color: var(--accent-primary);
+background: var(--bg-tertiary);
+}
+
+.upload-zone h3 {
+margin-bottom: 0.75rem;
+color: var(--text-primary);
+font-size: 1.125rem;
+font-weight: 600;
+}
+
+.upload-zone p {
+color: var(--text-secondary);
+margin-bottom: 1.25rem;
+font-size: 0.95rem;
+}
+
+.upload-button {
+background: var(--upload-gradient);
+color: white;
+border: none;
+padding: 0.875rem 1.75rem;
+border-radius: 8px;
+font-weight: 600;
+cursor: pointer;
+transition: all 0.3s ease;
+font-size: 0.95rem;
+}
+
+.upload-button:hover {
+transform: translateY(-2px);
+box-shadow: var(--shadow-md);
+}
+
+.analysis-grid {
+display: grid;
+grid-template-columns: 2fr 1fr;
+gap: 2rem;
+margin-bottom: 2rem;
+}
+
+.waveform-container {
+height: 300px;
+border-radius: 8px;
+overflow: hidden;
+position: relative;
+}
+
+.waveform-container canvas {
+border-radius: 8px;
+}
+
+.results-panel {
+opacity: 0;
+transform: translateY(20px);
+transition: all 0.5s ease;
+}
+
+.results-panel.visible {
+opacity: 1;
+transform: translateY(0);
+}
+
+.classification-result {
+background: var(--bg-tertiary);
+border: 1px solid var(--border-primary);
+border-radius: 12px;
+padding: 1.5rem;
+text-align: center;
+margin-bottom: 1.5rem;
+}
+
+.classification-display {
+font-size: 1.75rem;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+margin-bottom: 0.75rem;
+}
+
+.classification-display.healthy {
+color: var(--accent-success);
+}
+
+.classification-display.murmur {
+color: var(--accent-danger);
+}
+
+.classification-display.artifact {
+color: var(--accent-warning);
+}
+
+.confidence-bar {
+height: 8px;
+background: var(--bg-secondary);
+border-radius: 4px;
+overflow: hidden;
+margin: 1rem 0;
+position: relative;
+}
+
+.confidence-fill {
+height: 100%;
+background: var(--upload-gradient);
+border-radius: 4px;
+transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+position: relative;
+overflow: hidden;
+}
+
+.confidence-fill::after {
+content: '';
+position: absolute;
+top: 0;
+left: -100%;
+width: 100%;
+height: 100%;
+background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+100% { left: 100%; }
+}
+
+.confidence-text {
+font-size: 0.95rem;
+color: var(--text-secondary);
+font-weight: 500;
+}
+
+.metrics-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 0.75rem;
+}
+
+.metric-item {
+background: var(--bg-tertiary);
+border: 1px solid var(--border-primary);
+padding: 1rem;
+border-radius: 12px;
+text-align: center;
+}
+
+.metric-value {
+font-size: 1.5rem;
+font-weight: 700;
+color: var(--accent-primary);
+font-family: 'JetBrains Mono', monospace;
+}
+
+.metric-label {
+font-size: 0.8rem;
+color: var(--text-muted);
+margin-top: 0.5rem;
+font-weight: 500;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+}
+
+.signal-quality {
+margin-bottom: 1rem;
+}
+
+.signal-quality-display {
+font-size: 1rem;
+font-weight: 600;
+text-transform: uppercase;
+padding: 0.5rem;
+border-radius: 4px;
+text-align: center;
+margin-bottom: 0.5rem;
+}
+
+.signal-quality-display.excellent,
+.signal-quality-display.good {
+background: rgba(46, 160, 67, 0.15);
+color: var(--accent-success);
+border: 1px solid rgba(46, 160, 67, 0.3);
+}
+
+.signal-quality-display.fair {
+background: rgba(251, 133, 0, 0.15);
+color: var(--accent-warning);
+border: 1px solid rgba(251, 133, 0, 0.3);
+}
+
+.signal-quality-display.poor {
+background: rgba(248, 81, 73, 0.15);
+color: var(--accent-danger);
+border: 1px solid rgba(248, 81, 73, 0.3);
+}        .loading-overlay {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background: rgba(13, 17, 23, 0.95);
+backdrop-filter: blur(10px);
+display: none;
+align-items: center;
+justify-content: center;
+z-index: 1000;
+}
+
+.loading-spinner {
+width: 40px;
+height: 40px;
+border: 3px solid var(--border-primary);
+border-top: 3px solid var(--accent-primary);
+border-radius: 50%;
+animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+
+.error-message {
+background: rgba(248, 81, 73, 0.15);
+border: 1px solid rgba(248, 81, 73, 0.3);
+color: var(--accent-danger);
+padding: 1.25rem;
+border-radius: 12px;
+margin: 1rem 0;
+opacity: 0;
+transform: translateY(-10px);
+transition: all 0.3s ease;
+font-size: 0.95rem;
+}
+
+.error-message.visible {
+opacity: 1;
+transform: translateY(0);
+}
+
+.processing-time {
+font-size: 0.8rem;
+color: var(--text-muted);
+margin-top: 0.75rem;
+font-family: 'JetBrains Mono', monospace;
+}
+
+/* Footer Styles */
+.footer {
+margin-top: 4rem;
+padding: 2rem 0;
+border-top: 1px solid var(--border-primary);
+text-align: center;
+background: var(--bg-secondary);
+}
+
+.footer-content {
+max-width: 1200px;
+margin: 0 auto;
+padding: 0 1rem;
+}
+
+.footer h3 {
+color: var(--text-primary);
+font-size: 1.25rem;
+font-weight: 600;
+margin-bottom: 1rem;
+}
+
+.footer p {
+color: var(--text-secondary);
+font-size: 0.95rem;
+line-height: 1.6;
+margin-bottom: 1rem;
+}
+
+.footer-contact {
+margin-top: 1.5rem;
+padding-top: 1.5rem;
+border-top: 1px solid var(--border-primary);
+}
+
+.footer-contact p {
+color: var(--text-muted);
+font-size: 0.9rem;
+margin-bottom: 0.5rem;
+}
+
+.contact-email {
+color: var(--accent-primary);
+text-decoration: none;
+font-weight: 500;
+transition: color 0.2s ease;
+}
+
+.contact-email:hover {
+color: var(--accent-secondary);
+}
+
+@media (max-width: 768px) {
+.main-grid,
+.analysis-grid {
+grid-template-columns: 1fr;
+}
+
+.container {
+padding: 1rem;
+}
+
+.card {
+padding: 1.5rem;
+}
+
+.metrics-grid {
+grid-template-columns: 1fr;
+}
+
+.header h1 {
+font-size: 2rem;
+}
+
+.record-button {
+width: 100px;
+height: 100px;
+}
+
+.footer {
+margin-top: 3rem;
+padding: 1.5rem 0;
+}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>lubdub-ai</h1>
+<p>Advanced phonocardiogram analysis powered by Machine Learning. <br>Record, analyze, and understand heart sounds in real-time.</p>
+</div>
+<a href="/" style="position: absolute; top: 1rem; left: 1rem; color: #58A6FF; text-decoration: none; font-size: 1rem; padding: 0.5rem 1rem; border: 1px solid #30363D; border-radius: 8px; background: rgba(22, 27, 34, 0.8); backdrop-filter: blur(10px);">← Back to Home</a>
+
+<div class="main-grid">
+<!-- Recording Section -->
+<div class="card record-section">
+<h2 class="card-title">Live Recording</h2>
+
+<div class="instructions">
+<div class="instructions-title">Recording Instructions</div>
+<ol style="margin: 0; padding-left: 1.2rem; font-size: 0.875rem; line-height: 1.4; text-align: left;">
+<li>Optionally, remove phone case for better contact</li>
+<li>Place phone's mic against bare chest on your left side at the bottom of your heart</li>
+<li>Press firmly - mic needs direct skin contact</li>
+<li>Record in very quiet room</li>
+<li>Breathe slowly, although don't hold breath</li>
+<li>Try being very still as the phone mic is sensitive to all sounds/movements</li>
+</ol>
+</div>
+
+<button id="recordButton" class="record-button">
+<span class="button-text">Start Recording</span>
+<!-- <div class="processing-indicator">Processing...</div> -->
+</button>
+
+<div id="timer" class="timer">00:00</div>
+
+<div id="audioControls" class="audio-controls">
+<audio id="audioPlayer" controls></audio>
+<a id="downloadBtn" class="download-btn" download="heart-recording.wav">Download Recording</a>
+</div>
+</div>
+
+<!-- Upload Section -->
+<div class="card">
+<h2 class="card-title">File Upload</h2>
+
+<div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+<h3>Upload Audio File</h3>
+<p>Drag & drop or click to select WAV, MP3, or FLAC files</p>
+<button class="upload-button">Choose File</button>
+</div>
+
+<input type="file" id="fileInput" accept=".wav,.mp3,.flac" style="display: none;">
+</div>
+</div>
+
+<!-- Error Display -->
+<div id="errorMessage" class="error-message"></div>
+
+<!-- Analysis Section -->
+<div class="analysis-grid">
+<!-- Waveform Visualization -->
+<div class="card waveform-container">
+<canvas id="waveformChart"></canvas>
+</div>
+
+<!-- Results Panel -->
+<div id="resultsPanel" class="card results-panel">
+<h3 class="card-title">Analysis Results</h3>
+
+<!-- Classification -->
+<div class="classification-result">
+<div id="classificationResult" class="classification-display">---</div>
+<div class="confidence-bar">
+<div id="confidenceFill" class="confidence-fill" style="width: 0%;"></div>
+</div>
+<div id="confidenceText" class="confidence-text">Confidence: 0%</div>
+</div>
+
+<!-- Signal Quality -->
+<div class="signal-quality">
+<div class="metric-label">Signal Quality</div>
+<div id="signalQuality" class="signal-quality-display">---</div>
+<div id="processingTime" class="processing-time">Processing time: --- ms</div>
+</div>
+
+<!-- Heart Metrics -->
+<div class="metrics-grid">
+<div class="metric-item">
+<div id="heartRate" class="metric-value">---</div>
+<div class="metric-label">Heart Rate (BPM)</div>
+</div>
+<div class="metric-item">
+<div id="audioLength" class="metric-value">---</div>
+<div class="metric-label">Duration (sec)</div>
+</div>
+<div class="metric-item">
+<div id="s1Count" class="metric-value">---</div>
+<div class="metric-label">S1 Sounds</div>
+</div>
+<div class="metric-item">
+<div id="s2Count" class="metric-value">---</div>
+<div class="metric-label">S2 Sounds</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+<div>
+<div class="loading-spinner"></div>
+<p style="margin-top: 1rem; color: var(--text-secondary); font-weight: 500;">
+Analyzing heart sounds...
+</p>
+</div>
+</div>
+<!-- Footer -->
+<footer class="footer">
+    <div class="footer-content">
+        <h3>LubDub</h3>
+        <p>
+            DISCLAIMER: This tool is designed for educational 
+            and research purposes and should not be used as a substitute for professional medical advice, 
+            diagnosis, or treatment.
+        </p>
+        <p>
+            Always consult with a qualified healthcare provider for any medical concerns or questions 
+            about your heart health.
+        </p>
+        
+        <div class="footer-contact">
+            <p>Have feedback, suggestions, or found a bug?</p>
+            <p>Reach out to me at <a href="mailto:nkk2126@columbia.edu" class="contact-email">nkk2126@columbia.edu</a></p>
+        </div>
+    </div>
+</footer>
+<script>
+    class HeartScopeAI {
+        constructor() {
+            this.mediaRecorder = null;
+            this.audioChunks = [];
+            this.isRecording = false;
+            this.recordingTimer = null;
+            this.recordingTime = 0;
+            this.chart = null;
+            this.apiBaseUrl = window.location.origin.includes('localhost') 
+                ? 'http://localhost:8000' 
+                : 'https://lubdub.onrender.com';
+            this.recordedAudioBlob = null;
+            this.wakeLock = null;
+            
+            this.initializeEventListeners();
+            this.initializeChart();
+        }
+
+        initializeEventListeners() {
+            document.getElementById('recordButton').addEventListener('click', () => {
+                this.toggleRecording();
+            });
+
+            document.getElementById('fileInput').addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    this.uploadFile(e.target.files[0]);
+                }
+            });
+
+            // Drag and drop functionality
+            const uploadZone = document.querySelector('.upload-zone');
+            
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.style.borderColor = 'var(--accent-primary)';
+                uploadZone.style.background = 'var(--bg-tertiary)';
+            });
+
+            uploadZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadZone.style.borderColor = 'var(--border-primary)';
+                uploadZone.style.background = 'var(--bg-secondary)';
+            });
+
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.style.borderColor = 'var(--border-primary)';
+                uploadZone.style.background = 'var(--bg-secondary)';
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.uploadFile(files[0]);
+                }
+            });
+        }
+
+        initializeChart() {
+            const ctx = document.getElementById('waveformChart').getContext('2d');
+            this.chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Heart Sound Waveform',
+                        data: [],
+                        borderColor: '#58A6FF',
+                        backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(48, 54, 61, 0.3)' },
+                            ticks: { color: '#8B949E', font: { size: 11 } },
+                            title: {
+                                display: true,
+                                text: 'Time (seconds)',
+                                color: '#8B949E',
+                                font: { size: 12, weight: '500' }
+                            }
+                        },
+                        y: {
+                            grid: { color: 'rgba(48, 54, 61, 0.3)' },
+                            ticks: { color: '#8B949E', font: { size: 11 } },
+                            title: {
+                                display: true,
+                                text: 'Amplitude',
+                                color: '#8B949E',
+                                font: { size: 12, weight: '500' }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async toggleRecording() {
+            if (!this.isRecording) {
+                await this.startRecording();
+            } else {
+                this.stopRecording();
+            }
+        }
+
+        async startRecording() {
+            try {
+                // Check for mobile device
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                
+                // Add permission check
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('Microphone not supported on this device');
+                }
+
+                if (!window.MediaRecorder) {
+                    throw new Error('Audio recording not supported on this browser');
+                }
+
+                // iOS-specific audio context setup
+                if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')) {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        sampleRate: 44100,
+                        latencyHint: 'interactive'
+                    });
+                    
+                    // Resume AudioContext on mobile
+                    if (audioContext.state === 'suspended') {
+                        await audioContext.resume();
+                    }
+                }
+                
+                // Request wake lock to prevent suspension on mobile
+                if ('wakeLock' in navigator && isMobile) {
+                    try {
+                        this.wakeLock = await navigator.wakeLock.request('screen');
+                    } catch (err) {
+                        console.log('Wake lock not available:', err);
+                    }
+                }
+
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        sampleRate: 44100,
+                        channelCount: 1,
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                        googEchoCancellation: false,
+                        googAutoGainControl: false,
+                        googNoiseSuppression: false,
+                        googHighpassFilter: false,
+                        googTypingNoiseDetection: false,
+                        latency: 0.01,
+                        volume: 1.0
+                    } 
+                });
+                
+                // Force WAV format on iPhone if possible
+                let mimeType = 'audio/wav';
+                if (!MediaRecorder.isTypeSupported('audio/wav')) {
+                    mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+                }
+                
+                this.mediaRecorder = new MediaRecorder(stream, { mimeType });
+                this.audioChunks = [];
+                
+                console.log('🎙️ Recording with MIME type:', this.mediaRecorder.mimeType);
+                
+                this.mediaRecorder.ondataavailable = (event) => {
+                    this.audioChunks.push(event.data);
+                };
+                
+                this.mediaRecorder.onstop = () => {
+                    this.processRecording();
+                };
+                
+                this.mediaRecorder.start();
+                this.isRecording = true;
+                this.recordingTime = 0;
+                
+                this.updateRecordingUI(true);
+                this.startTimer();
+                
+                // Hide audio controls while recording
+                document.getElementById('audioControls').classList.remove('visible');
+                
+                // Auto-stop after 10 seconds
+                setTimeout(() => {
+                    if (this.isRecording) {
+                        this.stopRecording();
+                    }
+                }, 10000);
+                
+            } catch (error) {
+                console.error('Recording error:', error);
+                
+                // More specific error messages
+                if (error.name === 'NotAllowedError') {
+                    this.showError('Microphone permission denied. Please enable microphone access in browser settings and try again.');
+                } else if (error.name === 'NotFoundError') {
+                    this.showError('No microphone found on this device.');
+                } else if (error.name === 'NotSupportedError') {
+                    this.showError('Audio recording not supported on this browser. Try using Chrome or Safari.');
+                } else {
+                    this.showError('Error accessing microphone: ' + error.message);
+                }
+            }
+        }
+
+        stopRecording() {
+            if (this.mediaRecorder && this.isRecording) {
+                this.mediaRecorder.stop();
+                this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+                this.isRecording = false;
+                this.updateRecordingUI(false);
+                this.stopTimer();
+                
+                // Release wake lock
+                if (this.wakeLock) {
+                    this.wakeLock.release();
+                    this.wakeLock = null;
+                }
+            }
+        }
+
+        startTimer() {
+            const timerElement = document.getElementById('timer');
+            timerElement.classList.add('visible');
+            
+            this.recordingTimer = setInterval(() => {
+                this.recordingTime++;
+                const minutes = Math.floor(this.recordingTime / 60);
+                const seconds = this.recordingTime % 60;
+                timerElement.textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        stopTimer() {
+            if (this.recordingTimer) {
+                clearInterval(this.recordingTimer);
+                this.recordingTimer = null;
+            }
+            document.getElementById('timer').classList.remove('visible');
+        }
+
+        updateRecordingUI(isRecording) {
+            const button = document.getElementById('recordButton');
+            const buttonText = button.querySelector('.button-text');
+            
+            if (isRecording) {
+                button.classList.add('recording');
+                buttonText.textContent = 'Stop Recording';
+            } else {
+                button.classList.remove('recording');
+                buttonText.textContent = 'Start Recording';
+            }
+        }
+
+        setupAudioPlayback(audioBlob) {
+            this.recordedAudioBlob = audioBlob;
+            const audioPlayer = document.getElementById('audioPlayer');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const audioControls = document.getElementById('audioControls');
+            
+            // Create audio URL
+            const audioUrl = URL.createObjectURL(audioBlob);
+            audioPlayer.src = audioUrl;
+            downloadBtn.href = audioUrl;
+            
+            // Show audio controls
+            audioControls.classList.add('visible');
+        }
+
+        async processRecording() {
+            const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
+            
+            // Debug info
+            console.log('🎵 Audio Blob Info:');
+            console.log('   Type:', audioBlob.type);
+            console.log('   Size:', audioBlob.size, 'bytes');
+            console.log('   MediaRecorder MIME:', this.mediaRecorder.mimeType);
+            
+            // Setup audio playback
+            this.setupAudioPlayback(audioBlob);
+            
+            try {
+                // Convert to audio array for visualization and analysis
+                const arrayBuffer = await audioBlob.arrayBuffer();
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 44100  // Force consistent sample rate
+                });
+                
+                // Resume audio context if suspended (mobile fix)
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                
+                // Get audio data and ACTUAL sample rate
+                const audioData = audioBuffer.getChannelData(0);
+                const actualSampleRate = audioBuffer.sampleRate;
+                
+                console.log('🎵 Recorded audio info:');
+                console.log('   Actual sample rate:', actualSampleRate);
+                console.log('   Duration:', audioBuffer.duration, 'seconds');
+                console.log('   Array length:', audioData.length);
+                
+                // Apply low-frequency compensation for mobile devices
+                const compensatedAudio = this.compensateLowFrequencies(audioData, actualSampleRate);
+                
+                // Update waveform with actual sample rate
+                this.updateWaveform(compensatedAudio, actualSampleRate);
+                
+                // Send for analysis with compensated audio data
+                await this.analyzeAudio(Array.from(compensatedAudio), actualSampleRate);
+            } catch (error) {
+                console.error('Processing error:', error);
+                this.showError('Error processing recording: ' + error.message);
+            }
+        }
+
+        async uploadFile(file) {
+            if (!file) return;
+            
+            this.showLoading(true);
+            this.hideError();
+            
+            try {
+                // Read file and display waveform
+                const arrayBuffer = await file.arrayBuffer();
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                const audioData = audioBuffer.getChannelData(0);
+                
+                this.updateWaveform(audioData, audioBuffer.sampleRate);
+                
+                // Send file to API
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch(`${this.apiBaseUrl}/analyze`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Analysis failed: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                this.displayResults(result);
+                
+            } catch (error) {
+                this.showError('Error uploading file: ' + error.message);
+            } finally {
+                this.showLoading(false);
+            }
+        }
+
+        async analyzeAudio(audioArray, sampleRate) {
+            this.showLoading(true);
+            this.hideError();
+            
+            try {
+                const response = await fetch(`${this.apiBaseUrl}/analyze-realtime`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        audio_data: audioArray,
+                        sample_rate: sampleRate
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Analysis failed: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                this.displayResults(result);
+                
+            } catch (error) {
+                this.showError('Error analyzing audio: ' + error.message);
+            } finally {
+                this.showLoading(false);
+            }
+        }
+
+        compensateLowFrequencies(audioData, sampleRate) {
+            // Compensate for mobile devices that filter out low frequencies
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            if (!isMobile) {
+                return audioData; // No compensation needed for desktop
+            }
+            
+            console.log('📱 Applying mobile low-frequency compensation...');
+            
+            // Simple low-frequency boost for heart sound frequencies (20-200Hz)
+            const compensated = new Float32Array(audioData.length);
+            const boostFactor = 2.0; // Boost low frequencies that mobile may have attenuated
+            
+            for (let i = 0; i < audioData.length; i++) {
+                // Apply gentle boost to compensate for high-pass filtering
+                compensated[i] = audioData[i] * boostFactor;
+                
+                // Clamp to prevent distortion
+                compensated[i] = Math.max(-1, Math.min(1, compensated[i]));
+            }
+            
+            console.log('   Applied', boostFactor + 'x boost for low frequencies');
+            return compensated;
+        }
+
+        updateWaveform(audioData, sampleRate) {
+            // Downsample for visualization (show every 100th sample for performance)
+            const downsampleRate = Math.max(1, Math.floor(audioData.length / 1000));
+            const labels = [];
+            const data = [];
+            
+            for (let i = 0; i < audioData.length; i += downsampleRate) {
+                labels.push((i / sampleRate).toFixed(2));
+                data.push(audioData[i]);
+            }
+            
+            this.chart.data.labels = labels;
+            this.chart.data.datasets[0].data = data;
+            this.chart.update('none'); // No animation for performance
+        }
+
+        displayResults(result) {
+            const resultsPanel = document.getElementById('resultsPanel');
+            resultsPanel.classList.add('visible');
+            
+            // Classification with animation
+            const classification = document.getElementById('classificationResult');
+            classification.textContent = result.classification.toUpperCase();
+            classification.className = `classification-display ${result.classification}`;
+            
+            // Confidence with smooth animation
+            const confidence = Math.round(result.confidence * 100);
+            const confidenceFill = document.getElementById('confidenceFill');
+            const confidenceText = document.getElementById('confidenceText');
+            
+            // Animate confidence bar
+            setTimeout(() => {
+                confidenceFill.style.width = `${confidence}%`;
+            }, 300);
+            
+            confidenceText.textContent = `Confidence: ${confidence}%`;
+            
+            // Signal Quality with color coding
+            const signalQuality = document.getElementById('signalQuality');
+            signalQuality.textContent = result.signal_quality.toUpperCase();
+            signalQuality.className = `signal-quality-display ${result.signal_quality.toLowerCase()}`;
+            
+            // Update heart metrics - hide S1/S2 counts if artifact is detected
+            document.getElementById('heartRate').textContent = 
+                result.heart_rate ? Math.round(result.heart_rate) : '---';
+                
+            // Only show S1/S2 counts if not artifact
+            if (result.classification.toLowerCase() !== 'artifact') {
+                document.getElementById('s1Count').textContent = result.s1_count;
+                document.getElementById('s2Count').textContent = result.s2_count;
+                // Make sure elements are visible
+                document.getElementById('s1Count').parentElement.style.display = 'block';
+                document.getElementById('s2Count').parentElement.style.display = 'block';
+            } else {
+                // Hide S1/S2 count elements for artifact classification
+                document.getElementById('s1Count').parentElement.style.display = 'none';
+                document.getElementById('s2Count').parentElement.style.display = 'none';
+            }
+            
+            document.getElementById('processingTime').textContent = 
+                `Processing time: ${Math.round(result.processing_time_ms)} ms`;
+            
+            // Audio duration
+            const duration = result.metadata.duration || result.metadata.original_duration || 0;
+            document.getElementById('audioLength').textContent = duration.toFixed(1);
+        }
+
+        showLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            if (show) {
+                overlay.style.display = 'flex';
+                // Add slight delay for smooth transition
+                setTimeout(() => {
+                    overlay.style.opacity = '1';
+                }, 10);
+            } else {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                }, 300);
+            }
+        }
+
+        showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('visible');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                this.hideError();
+            }, 5000);
+        }
+
+        hideError() {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.classList.remove('visible');
+        }
+    }
+
+    // Initialize the application when the page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        new HeartScopeAI();
+        
+        // Add some interactive polish
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-2px)';
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'translateY(0)';
+            });
+        });
+        
+        // Smooth reveal animation on load
+        setTimeout(() => {
+            document.querySelectorAll('.card').forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        }, 200);
+    });
+
+    // Add initial loading state
+    document.querySelectorAll('.card').forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(10px)';
+        card.style.transition = 'all 0.4s ease';
+    });
+</script>
+</body>
+</html>
